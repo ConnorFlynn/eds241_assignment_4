@@ -1,0 +1,75 @@
+---
+title: "EDS241: Assignment 4 "
+author: "Connor Flynn"
+date: '`r format(Sys.time(), "%m/%d/%Y")`'
+output: 
+  pdf_document:
+    toc: false
+    number_sections: yes
+header-includes:
+  - \setlength{\parindent}{1em}
+  - \usepackage{float}
+--- 
+  
+``` {r setup, echo = FALSE, message = FALSE, warning = FALSE}
+
+# set default chunk options
+knitr::opts_chunk$set(fig.width = 4, fig.height = 3, 
+                      echo = TRUE, message = FALSE, warning = FALSE)
+
+
+# load packages
+packages=c("stargazer", "here", "tidyr", "dplyr","stringr", "janitor", 
+           "cowplot", "ggplot2", "tinytex", "datasets", "tibble", "tidyverse",
+           "estimatr", "car", "AER")
+
+for (i in packages) {
+  if (require(i,character.only=TRUE)==FALSE) {
+    install.packages(i,repos='http://cran.us.r-project.org')
+  }
+  else {
+    require(i,character.only=TRUE)
+  }
+}
+
+#devtools::install_github('rstudio/rmarkdown')
+options(scipen=9) # not scientific notation
+
+
+```
+
+
+```{r}
+data <- read_csv(here("data/EU_sardines.csv"))
+```
+
+(a) Estimate a bivariate regression of log(volume_sold_kg) on log(price euro_kg). What is the price elasticity of demand for sardines? Test the null hypothesis that the price elasticity is equal to -1.
+
+The price elasticicty of demand for sardines is -1.54. We can reject the null hypothesis that the price elasticity is equal to -1, due to the 95% confidence level that price elasticity falls between -1.69 and -1.39.
+
+```{r}
+volume_sold_price_regression <- lm_robust(log(volume_sold_kg) ~ log(price_euro_kg), data = data)
+volume_sold_price_regression
+```
+
+(b) Like in Lecture 8 (see the IV.R script), we will use wind_m_s as an instrument for log(price_euro_kg). To begin, estimate the first-stage regression relating log(price_euro_kg) to wind_m_s. Interpret the estimated coefficient on wind speed. Does it have the expected sign? Also test for the relevance of the instrument and whether it is a “weak” instrument by reporting the proper F-statistic
+
+For every one unit increase in price, wind speed increases by 0.067. I does have the expected sign. 
+
+The f-statitstic is 144.65, telling us that our instrument is not weak due to the value being greater than 10. 
+```{r}
+price_wind_regression <- lm_robust(log(price_euro_kg) ~ wind_m_s, data = data)
+price_wind_regression
+
+linearHypothesis(price_wind_regression, c("wind_m_s=0"), white.adjust = "hc2")
+```
+
+(c) Estimate the TSLS estimator of the price elasticity of demand for sardines using wind_m_s as an instrument for log(price_euro_kg). What is the estimated price elasticity of demand for sardines? 
+
+The estimated price elasticity of demand for sardines is -1.08
+
+```{r}
+tsls_regression <- ivreg(log(volume_sold_kg) ~ log(price_euro_kg) | wind_m_s, data = data)
+summary(tsls_regression)
+```
+
